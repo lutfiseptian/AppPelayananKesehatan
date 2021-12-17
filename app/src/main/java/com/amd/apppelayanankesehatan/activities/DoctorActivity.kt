@@ -1,0 +1,87 @@
+package com.amd.apppelayanankesehatan.activities
+
+import android.app.ProgressDialog
+import androidx.appcompat.app.AppCompatActivity
+import android.os.Bundle
+import android.view.MenuItem
+import android.widget.Toast
+import androidx.lifecycle.ViewModelProvider
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.amd.apppelayanankesehatan.R
+import com.amd.apppelayanankesehatan.adapter.MainAdapter
+import com.amd.apppelayanankesehatan.data.model.ModelResults
+import com.amd.apppelayanankesehatan.viewmodel.ListResultViewModel
+import im.delight.android.location.SimpleLocation
+import kotlinx.android.synthetic.main.activity_detail_location.*
+import kotlinx.android.synthetic.main.activity_detail_location.toolbar
+import kotlinx.android.synthetic.main.activity_location.*
+
+class DoctorActivity : AppCompatActivity() {
+
+    lateinit var simpleLocation: SimpleLocation
+    lateinit var strLokasi: String
+    lateinit var progressDialog: ProgressDialog
+    lateinit var mainAdapter: MainAdapter
+    lateinit var listResultViewModel: ListResultViewModel
+    var strLatitude = 0.0
+    var strLongitude = 0.0
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_location)
+
+        setSupportActionBar(toolbar)
+        assert(supportActionBar != null)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.setDisplayShowTitleEnabled(false)
+
+        progressDialog = ProgressDialog(this)
+        progressDialog.setTitle("Mohon tunggu...")
+        progressDialog.setCancelable(false)
+        progressDialog.setMessage("sedang menampilkan lokasi")
+
+        //set library location
+        simpleLocation = SimpleLocation(this)
+        if (!simpleLocation.hasLocationEnabled()) {
+            SimpleLocation.openSettings(this)
+        }
+
+        //get location
+        strLatitude = simpleLocation.latitude
+        strLongitude = simpleLocation.longitude
+
+        //set location lat long
+        strLokasi = "$strLatitude,$strLongitude"
+
+        //set title
+        tvTitle.setText("Praktik Dokter Terdekat")
+
+        //set data adapter
+        mainAdapter = MainAdapter(this)
+        rvListResult.setLayoutManager(LinearLayoutManager(this))
+        rvListResult.setAdapter(mainAdapter)
+        rvListResult.setHasFixedSize(true)
+
+        //viewmodel
+        listResultViewModel = ViewModelProvider(this, ViewModelProvider.NewInstanceFactory()).get(ListResultViewModel::class.java)
+        listResultViewModel.setDoctorLocation(strLokasi)
+        progressDialog.show()
+        listResultViewModel.getDoctorLocation().observe(this, { modelResults: ArrayList<ModelResults> ->
+            if (modelResults.size != 0) {
+                mainAdapter.setResultAdapter(modelResults)
+                progressDialog.dismiss()
+            } else {
+                Toast.makeText(this, "Oops, lokasi Praktik Dokter tidak ditemukan!", Toast.LENGTH_SHORT).show()
+            }
+        })
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == android.R.id.home) {
+            finish()
+            return true
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
+}
